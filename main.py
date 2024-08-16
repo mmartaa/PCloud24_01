@@ -85,7 +85,7 @@ def grafico():
 def get_data_from_gcstorage():
     nome_utente = "Carla"
     BucketName = "pcloud24_1"         #definisco il bucket di salvataggio in clooud
-    dumpPath = f"/tmp/{nome_utente}.csv"  # definisco il path di salvataggio locale del modello
+    dumpPath = f"C:/pcloud/tmp/{nome_utente}.csv"  # definisco il path di salvataggio locale del modello
     blobName = f"Dati/{nome_utente}.csv"       #definisco il nome del file di salvataggio sul cloud
 
     #accedo al cloud storage
