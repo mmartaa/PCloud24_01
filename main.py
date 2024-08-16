@@ -50,16 +50,14 @@ def load_user(username):
 @app.route('/login', methods=['POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('/static/grafico.html'))
-
+        return redirect(url_for('grafico'))
     username = request.values['u']
     password = request.values['p']
-
     if username in usersdb and password == usersdb[username]:
         login_user(User(username), remember=True)
-        return redirect('/grafico')
+        return redirect(url_for('grafico'))
 
-    flash('Login errato, riprova!', 'error')
+    print("login fallito")
     return redirect('/static/login.html')
 
 
@@ -72,6 +70,7 @@ def logout():
 @app.route('/grafico', methods=['GET'])
 @login_required
 def grafico():
+    '''
     #prendi i dati dal file giusto
     user_id = request.args.get('user_id') #????
     collection_ref = db.collection(user_id)
@@ -79,7 +78,8 @@ def grafico():
     dati = [doc.to_dict() for doc in docs]
 
     return redirect(url_for('static', filename='grafico.html')), jsonify(dati)
-
+    '''
+    return "ciao grafico"
 
 def get_data_from_gcstorage():
     nome_utente = "Carla"
