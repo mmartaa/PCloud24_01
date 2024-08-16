@@ -59,7 +59,7 @@ def login():
         login_user(User(username), remember=True)
         return redirect('/grafico')
 
-    flash('Nome utente o password non validi', 'error')
+    flash('Login errato, riprova!', 'error')
     return redirect('/static/login.html')
 
 
