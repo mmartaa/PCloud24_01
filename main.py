@@ -25,7 +25,7 @@ class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
         super().__init__()
         self.id = username
         self.username = username
-        #self.par = {}
+        self.par = {}
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secret_key
@@ -84,6 +84,7 @@ def grafico():
     return redirect(url_for('static', filename='grafico.html')), jsonify(dati)
     '''
     return "ciao grafico"
+
 '''
 def prova_dati_su_gcloud():
     directory_path = 'Dati'
