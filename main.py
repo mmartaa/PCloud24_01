@@ -15,9 +15,9 @@ db = 'livelyageing'
 coll = 'utenti'
 
 #creo client per accedere a database firestore
-#db = firestore.Client.from_service_account_json('credentials.json', database=db)
+db = firestore.Client.from_service_account_json('credentials.json', database=db)
 #client per accedere a cloud storage
-#storage_client = storage.Client.from_service_account_json('credentials.json')
+storage_client = storage.Client.from_service_account_json('credentials.json')
 
 
 class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
@@ -84,7 +84,7 @@ def grafico():
     return redirect(url_for('static', filename='grafico.html')), jsonify(dati)
     '''
     return "ciao grafico"
-
+'''
 def prova_dati_su_gcloud():
     directory_path = 'Dati'
     bucket_name = 'pcloud24_1'
@@ -107,7 +107,7 @@ def prova_dati_su_gcloud():
             print("caricato")
 
             save_file_to_firestore(blob, filename, current_time)
-'''
+
 def save_file_to_firestore(blob, filename, current_time):
     db = 'livelyageing'
     utenti = ['carla', 'lalla', 'luigi']
@@ -127,7 +127,7 @@ def save_file_to_firestore(blob, filename, current_time):
         'content': file_data,
         'timestamp': current_time
     })
-'''
+
 
 
 def save_file_to_firestore(blob, filename, current_time):
@@ -146,9 +146,9 @@ def save_file_to_firestore(blob, filename, current_time):
     })
 
     print(f'File {filename} salvato su Firestore')
-
+'''
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
 
-    prova_dati_su_gcloud()
+    #prova_dati_su_gcloud()
