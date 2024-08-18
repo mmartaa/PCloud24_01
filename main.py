@@ -25,7 +25,7 @@ class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
         super().__init__()
         self.id = username
         self.username = username
-        self.par = {}
+        #self.par = {}
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secret_key
