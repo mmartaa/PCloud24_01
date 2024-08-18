@@ -3,3 +3,4 @@ flask-login
 requests
 google-cloud-storage
 google-cloud-firestore
+pandas
