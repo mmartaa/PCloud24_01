@@ -60,7 +60,6 @@ def login():
     if username in usersdb and password == usersdb[username]:
         login_user(User(username), remember=True)
         return redirect(url_for('grafico'))
-
     print("login fallito")
     return redirect('/static/login.html')
 
