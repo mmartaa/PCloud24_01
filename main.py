@@ -56,7 +56,7 @@ def login():
     username = request.values['u']
     password = request.values['p']
 
-    if username in usersdb and password == usersdb[username]['p']: #va bene ['p']??????
+    if username in usersdb and password == usersdb[username]: 
         login_user(User(username), remember=True)
         return redirect('/grafico')
 
