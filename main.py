@@ -84,7 +84,7 @@ def grafico():
     '''
     return "ciao grafico"
 
-'''
+
 def prova_dati_su_gcloud():
     directory_path = 'Dati'
     bucket_name = 'pcloud24_1'
@@ -106,8 +106,8 @@ def prova_dati_su_gcloud():
             blob.upload_from_filename(file_path)
             print("caricato")
 
-            save_file_to_firestore(blob, filename, current_time)
-
+            #save_file_to_firestore(blob, filename, current_time)
+'''
 def save_file_to_firestore(blob, filename, current_time):
     db = 'livelyageing'
     utenti = ['carla', 'lalla', 'luigi']
@@ -151,4 +151,4 @@ def save_file_to_firestore(blob, filename, current_time):
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
 
-    #prova_dati_su_gcloud()
+    prova_dati_su_gcloud()
