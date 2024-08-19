@@ -86,15 +86,15 @@ def grafico():
 
 
 def prova_dati_su_gcloud():
-    directory_path = 'Dati'
-    bucket_name = 'pcloud24_1'
+    #directory_path = 'Dati'
+    #bucket_name = 'pcloud24_1'
 
     #accedo al cloud storage
     storage_client = storage.Client.from_service_account_json('credentials.json')
-    bucket = storage_client.bucket(bucket_name)
+    bucket = storage_client.bucket('pcloud24_1')
 
-    for filename in os.listdir(directory_path):
-        if os.path.isfile(os.path.join(directory_path, filename)):
+    for filename in os.listdir('Dati'):
+        if os.path.isfile(os.path.join('Dati', filename)): #controlla che sia un file e non una cartella
             # Genera un timestamp per ogni file
             now = datetime.now()
             current_time = now.strftime('%Y_%m_%d_%H_%M_%S')
@@ -102,7 +102,7 @@ def prova_dati_su_gcloud():
 
             #carica file su gcloud
             blob = bucket.blob(blob_name)
-            file_path = os.path.join(directory_path, filename)
+            file_path = os.path.join('Dati', filename)
             blob.upload_from_filename(file_path)
             print("caricato")
 
