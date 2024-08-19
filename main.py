@@ -53,7 +53,7 @@ def load_user(username):
 @app.route('/login', methods=['POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('grafico')), "sono autenticato"
+        return redirect(url_for('grafico'))
     username = request.values['u']
     password = request.values['p']
     if username in usersdb and password == usersdb[username]:
@@ -67,7 +67,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('static', filename='index.html')) #('/')
+    return redirect('/') #url_for('static', filename='index.html'
 
 
 @app.route('/grafico', methods=['GET'])
