@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from datetime import datetime
 
-from flask import Flask, request, redirect, url_for, render_template, session, jsonify, flash
+from flask import Flask, request, redirect, url_for
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
 import json
 from secret import secret_key
