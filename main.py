@@ -25,11 +25,10 @@ class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
         super().__init__()
         self.id = username
         self.username = username
-        #self.par = {}
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secret_key
-
 login = LoginManager(app)
 login.login_view = '/static/login.html'
 
@@ -54,17 +53,18 @@ def load_user(username):
 @app.route('/login', methods=['POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('grafico'))
+        return redirect(url_for('grafico')), "sono autenticato"
     username = request.values['u']
     password = request.values['p']
     if username in usersdb and password == usersdb[username]:
         login_user(User(username), remember=True)
         return redirect(url_for('grafico'))
     print("login fallito")
-    return redirect('/static/login.html')
+    return redirect(url_for('root'))
 
 
-@app.route('/logout')  # methods=["POST"]
+@app.route('/logout')
+@login_required
 def logout():
     logout_user()
     return redirect(url_for('static', filename='index.html')) #('/')
