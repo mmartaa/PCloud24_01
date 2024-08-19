@@ -64,10 +64,10 @@ def login():
     return redirect('/static/login.html')
 
 
-@app.route('/logout', methods=["POST"])
+@app.route('/logout')  # methods=["POST"]
 def logout():
     logout_user()
-    return redirect('/')
+    return redirect(url_for('static', filename='index.html')) #('/')
 
 
 @app.route('/grafico', methods=['GET'])
