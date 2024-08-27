@@ -38,7 +38,7 @@ usersdb = {
 }
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def root():
     return redirect(url_for('static', filename='index.html'))
 
@@ -50,17 +50,21 @@ def load_user(username):
     return None
 
 
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET','POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('grafico'))
-    username = request.values['u']
-    password = request.values['p']
-    if username in usersdb and password == usersdb[username]:
-        login_user(User(username), remember=True)
-        return redirect(url_for('grafico'))
-    print("login fallito")
-    return redirect(url_for('root'))
+    if request.method == 'POST':
+        if current_user.is_authenticated:
+            return redirect(url_for('grafico'))
+
+        username = request.values['u']
+        password = request.values['p']
+
+        if username in usersdb and password == usersdb[username]:
+            login_user(User(username), remember=True)
+            return redirect(url_for('grafico'))
+        print("login fallito")
+
+    return redirect('/static/login.html')
 
 
 @app.route('/logout')
