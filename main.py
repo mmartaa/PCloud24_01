@@ -88,7 +88,7 @@ def grafico():
     '''
     return "ciao grafico"
 
-
+'''
 def prova_dati_su_gcloud():
     #directory_path = 'Dati'
     #bucket_name = 'pcloud24_1'
@@ -111,11 +111,11 @@ def prova_dati_su_gcloud():
             print("caricato")
 
             #save_file_to_firestore(blob, filename, current_time)
-'''
+
+
 def save_file_to_firestore(blob, filename, current_time):
     db = 'livelyageing'
-    utenti = ['carla', 'lalla', 'luigi']
-    num_utenti = len(utenti)
+    utenti = ['carla']
 
     db = firestore.Client.from_service_account_json('credentials.json', database=db)
 
@@ -125,34 +125,35 @@ def save_file_to_firestore(blob, filename, current_time):
         doc_ref = db.collection('utenti').document(f'{filename}')
         
         
-    prova_ref = doc_ref.collection('posizioni').document(())
-    doc_ref.set({
-        'filename': filename,
-        'content': file_data,
-        'timestamp': current_time
-    })
+        prova_ref = doc_ref.collection('posizioni').document(())
+        doc_ref.set({
+            'filename': filename,
+            'content': file_data,
+            'timestamp': current_time
+        })
+'''
 
+def save_file_to_firestore(blob, filename):
+    # Connetti al database Firestore
+    db = firestore.Client.from_service_account_json('credentials.json')
 
-
-def save_file_to_firestore(blob, filename, current_time):
-    # Inizializza il client di Firestore
-    firestore_client = firestore.Client()
-
-    # Leggi il file dal blob
+    # Scarica il contenuto del file come testo
     file_data = blob.download_as_text()
 
-    # Salva i dati su Firestore
-    doc_ref = firestore_client.collection('files').document(f'{filename}-{current_time}')
+    # Crea un riferimento al documento nella collezione 'utenti' con il nome del file
+    doc_ref = db.collection('utenti').document(filename)
+
+    # Salva i dati nel documento Firestore
     doc_ref.set({
         'filename': filename,
-        'content': file_data,
-        'timestamp': current_time
+        'content': file_data
     })
-
-    print(f'File {filename} salvato su Firestore')
-'''
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
 
-    prova_dati_su_gcloud()
+    #prova_dati_su_gcloud()
+
+    blob = 'Carla.csv'
+    filename = 'carla'
+    save_file_to_firestore()
