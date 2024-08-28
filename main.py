@@ -207,8 +207,8 @@ def save_file_to_firestore(blob, filename):
 if __name__ == '__main__':
     # Process CSV files before starting the Flask app
     local_directory = 'Dati'  # Change this to your local directory containing CSV files
-    bucket_name = 'your-bucket-name'  # Change this to your Google Cloud Storage bucket name
-    collection_prefix = 'experiment_data'
+    bucket_name = 'pcloud24_1'  # Change this to your Google Cloud Storage bucket name
+    collection_prefix = 'dati'
 
     process_csv_files(local_directory, bucket_name, collection_prefix)
 
