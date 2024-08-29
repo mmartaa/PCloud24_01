@@ -119,7 +119,7 @@ def parse_csv_and_store_in_firestore(blob, collection_name):
         # Memorizza in Firestore
         #db = firestore.Client()
         for record in records:
-            doc_id = str(record['tempo']).replace(" ", "_").replace(":", "-")
+            doc_id = str(record['Tempo']).replace(" ", "_").replace(":", "-")
             doc_ref = db.collection(collection_name).document()
             doc_ref.set(record)
 
