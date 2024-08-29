@@ -80,6 +80,7 @@ def logout():
 def grafico():
     username = current_user.username
 
+    print(current_user.username)
     html_template = '''
     <html>
         <head>
