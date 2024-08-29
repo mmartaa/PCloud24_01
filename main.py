@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import tempfile
 
-from flask import Flask, request, redirect, url_for
+from flask import Flask, request, redirect, url_for, render_template_string
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
 import json
 from secret import secret_key
@@ -78,7 +78,25 @@ def logout():
 @app.route('/grafico', methods=['GET'])
 @login_required
 def grafico():
+    username = current_user.username
+
+    html_template = '''
+    <html>
+        <head>
+            <title>Grafico</title>
+        </head>
+        <body>
+            <h1>Benvenuto, {{ username }}!</h1>
+        </body>
+    </html>
     '''
+
+    return render_template_string(html_template, username=username)
+
+'''
+@app.route('/grafico', methods=['GET'])
+@login_required
+def grafico():
     #prendi i dati dal file giusto
     user_id = request.args.get('user_id') #????
     collection_ref = db.collection(user_id)
@@ -86,9 +104,9 @@ def grafico():
     dati = [doc.to_dict() for doc in docs]
 
     return redirect(url_for('static', filename='grafico.html')), jsonify(dati)
-    '''
-    return "ciao grafico"
 
+    return "ciao grafico"
+'''
 
 def upload_to_cloud_storage(file_path, bucket_name):
     # Carica file su Google Cloud Storage
@@ -117,10 +135,9 @@ def parse_csv_and_store_in_firestore(blob, collection_name):
         records = df.to_dict('records')
 
         # Memorizza in Firestore
-        #db = firestore.Client()
         for record in records:
-            doc_id = str(record['Tempo']).replace(" ", "_").replace(":", "-")
-            doc_ref = db.collection(collection_name).document()
+            doc_id = f"{collection_name}_{str(record['Tempo']).replace(' ', '_').replace(':', '-')}"
+            doc_ref = db.collection(collection_name).document(doc_id)
             doc_ref.set(record)
 
         print(f"Data from {blob.name} stored in Firestore collection {collection_name}")
