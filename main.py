@@ -91,7 +91,7 @@ def grafico():
 
 
 def upload_to_cloud_storage(file_path, bucket_name):
-    """Upload a file to Google Cloud Storage."""
+    # Carica file su Google Cloud Storage
     bucket = storage_client.bucket(bucket_name)
     blob_name = os.path.basename(file_path)
     blob = bucket.blob(blob_name)
@@ -100,24 +100,24 @@ def upload_to_cloud_storage(file_path, bucket_name):
     return blob
 
 def parse_csv_and_store_in_firestore(blob, collection_name):
-    """Parse CSV data from Cloud Storage and store in Firestore."""
-    # Download the blob content
+    # Prendi i dati CSV da Cloud Storage e memorizzali in Firestore
+    # Download contenuto del blob
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file: #crea file temporaneo
         temp_filename = temp_file.name
 
     try:
-        # Download the blob content to the temporary file
+        # Download il contenuto del blob nel file temporaneo
         blob.download_to_filename(temp_filename)
 
-        # Parse CSV
+        # Analizza CSV
         df = pd.read_csv(temp_filename, sep=';')
 
-        # Convert DataFrame to list of dictionaries
+        # converti il file in lista di dizionari
         records = df.to_dict('records')
 
-        # Store in Firestore
-        db = firestore.Client()
+        # Memorizza in Firestore
+        #db = firestore.Client()
         for record in records:
             doc_ref = db.collection(collection_name).document()
             doc_ref.set(record)
@@ -125,90 +125,28 @@ def parse_csv_and_store_in_firestore(blob, collection_name):
         print(f"Data from {blob.name} stored in Firestore collection {collection_name}")
 
     finally:
-        # Clean up the temporary file
+        # Pulisci file temporaneo
         os.unlink(temp_filename)
 
 def process_csv_files(local_directory, bucket_name, collection_prefix):
-    """Process all CSV files in a directory."""
+    # Elabora tutti i file CSV in una cartella
     for filename in os.listdir(local_directory):
         if filename.endswith('.csv'):
             file_path = os.path.join(local_directory, filename)
 
-            # Upload to Cloud Storage
+            # Carica su Cloud Storage
             blob = upload_to_cloud_storage(file_path, bucket_name)
 
-            # Parse and store in Firestore
+            # Analizza e memorizza in Firestore
             collection_name = f"{collection_prefix}_{os.path.splitext(filename)[0]}"
             parse_csv_and_store_in_firestore(blob, collection_name)
 
 
-'''
-def prova_dati_su_gcloud():
-    #directory_path = 'Dati'
-    #bucket_name = 'pcloud24_1'
-
-    #accedo al cloud storage
-    storage_client = storage.Client.from_service_account_json('credentials.json')
-    bucket = storage_client.bucket('pcloud24_1')
-
-    for filename in os.listdir('Dati'):
-        if os.path.isfile(os.path.join('Dati', filename)): #controlla che sia un file e non una cartella
-            # Genera un timestamp per ogni file
-            now = datetime.now()
-            current_time = now.strftime('%Y_%m_%d_%H_%M_%S')
-            blob_name = f'{filename}-{current_time}'
-
-            #carica file su gcloud
-            blob = bucket.blob(blob_name)
-            file_path = os.path.join('Dati', filename)
-            blob.upload_from_filename(file_path)
-            print("caricato")
-
-            #save_file_to_firestore(blob, filename, current_time)
-
-
-def save_file_to_firestore(blob, filename, current_time):
-    db = 'livelyageing'
-    utenti = ['carla']
-
-    db = firestore.Client.from_service_account_json('credentials.json', database=db)
-
-    file_data = blob.download_as_text()
-    
-    for u in filename:
-        doc_ref = db.collection('utenti').document(f'{filename}')
-        
-        
-        prova_ref = doc_ref.collection('posizioni').document(())
-        doc_ref.set({
-            'filename': filename,
-            'content': file_data,
-            'timestamp': current_time
-        })
-        
-def save_file_to_firestore(blob, filename):
-    # Connetti al database Firestore
-    db = firestore.Client.from_service_account_json('credentials.json')
-
-    # Scarica il contenuto del file come testo
-    file_data = blob.download_as_text()
-
-    # Crea un riferimento al documento nella collezione 'utenti' con il nome del file
-    doc_ref = db.collection('utenti').document(filename)
-
-    # Salva i dati nel documento Firestore
-    doc_ref.set({
-        'filename': filename,
-        'content': file_data
-    })
-'''
-
-
 if __name__ == '__main__':
-    # Process CSV files before starting the Flask app
-    local_directory = 'Dati'  # Change this to your local directory containing CSV files
-    bucket_name = 'pcloud24_1'  # Change this to your Google Cloud Storage bucket name
-    collection_prefix = 'dati'
+    # carica i dati prima di far partire app Flask
+    local_directory = 'Dati'  # local directory con i file
+    bucket_name = 'pcloud24_1'  # nome del bucket su Google Cloud Storage
+    collection_prefix = 'dati' # prefisso per i dati della raccolta (ES: dati_Carla)
 
     process_csv_files(local_directory, bucket_name, collection_prefix)
 
