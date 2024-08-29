@@ -11,16 +11,6 @@ from google.cloud import firestore
 from google.cloud import storage
 
 
-
-db = 'livelyageing'
-#coll = 'utenti'
-
-#creo client per accedere a database firestore
-db = firestore.Client.from_service_account_json('credentials.json', database=db)
-#client per accedere a cloud storage
-storage_client = storage.Client.from_service_account_json('credentials.json')
-
-
 class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
     def __init__(self, username):
         super().__init__()
@@ -30,8 +20,20 @@ class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secret_key
+
+local = True
+
 login = LoginManager(app)
 login.login_view = '/static/login.html'
+
+
+db = 'livelyageing'
+
+#creo client per accedere a database firestore
+db = firestore.Client.from_service_account_json('credentials.json', database=db) if local else firestore.Client()
+#client per accedere a cloud storage
+storage_client = storage.Client.from_service_account_json('credentials.json')
+
 
 
 usersdb = {
