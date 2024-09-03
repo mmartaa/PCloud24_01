@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import tempfile
 
-from flask import Flask, request, redirect, url_for, render_template_string, jsonify
+from flask import Flask, request, redirect, url_for, render_template_string, jsonify, render_template
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
 import json
 from secret import secret_key
@@ -104,28 +104,18 @@ def grafico():
             'Z': doc_data['Z']
         })
 
-    # Sort data by Tempo
-    #data.sort(key=lambda x: x['Tempo'])
 
     # Convert data to JSON
     #data = json.dumps(data)
 
-    return json.dumps(data), 200
+    #return json.dumps(data), 200
+    return jsonify(data)
 
-'''
-@app.route('/grafico', methods=['GET'])
+@app.route('/chart', methods=['GET'])
 @login_required
-def grafico():
-    #prendi i dati dal file giusto
-    user_id = request.args.get('user_id') #????
-    collection_ref = db.collection(user_id)
-    docs = collection_ref.stream()
-    dati = [doc.to_dict() for doc in docs]
+def chart():
+    return redirect(url_for('static', filename='grafico.html'))
 
-    return redirect(url_for('static', filename='grafico.html')), jsonify(dati)
-
-    return "ciao grafico"
-'''
 
 def upload_to_cloud_storage(file_path, bucket_name):
     # Carica file su Google Cloud Storage
