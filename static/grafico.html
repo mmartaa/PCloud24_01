@@ -151,8 +151,8 @@
 
 			<script type="text/javascript">
 				$.get("/grafico",function(datav, status){
-					datav = JSON.parse(data)
-
+					datav = JSON.parse(datav)
+<!--
 					// Funzione per estrarre il primo e il terzo valore
 					function extractValues(row) {
 					 	return [parseFloat(row["X"]), parseFloat(row["Z"])];
@@ -162,7 +162,7 @@
 					var filteredData = datav.map(extractValues);
 
 					console.log(filteredData);
-
+-->
 					google.charts.load('current', {'packages':['corechart', 'line']});
 					google.charts.setOnLoadCallback(drawChart);
 
