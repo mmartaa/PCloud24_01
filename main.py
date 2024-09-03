@@ -1,8 +1,9 @@
 import os
 import pandas as pd
 from datetime import datetime
+import tempfile
 
-from flask import Flask, request, redirect, url_for, render_template, session, jsonify, flash
+from flask import Flask, request, redirect, url_for, render_template_string, jsonify
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
 import json
 from secret import secret_key
@@ -10,36 +11,45 @@ from google.cloud import firestore
 from google.cloud import storage
 
 
-
-db = 'livelyageing'
-coll = 'utenti'
-
-#creo client per accedere a database firestore
-db = firestore.Client.from_service_account_json('credentials.json', database=db)
-#client per accedere a cloud storage
-storage_client = storage.Client.from_service_account_json('credentials.json')
-
-
 class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
     def __init__(self, username):
         super().__init__()
         self.id = username
         self.username = username
-        #self.par = {}
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secret_key
 
+# da cambiare prima di caricare su cloud
+
+local = True
+
 login = LoginManager(app)
 login.login_view = '/static/login.html'
+
+
+db = 'livelyageing'
+
+#creo client per accedere a database firestore
+db = firestore.Client.from_service_account_json('credentials.json', database=db) if local else firestore.Client()
+#client per accedere a cloud storage
+storage_client = storage.Client.from_service_account_json('credentials.json')
+
 
 
 usersdb = {
     'marta':'gabbi'
 }
 
+utenti = {}
 
-@app.route('/')
+@app.route('/utenti',methods=['GET'])
+def utenti():
+    return json.dumps(list(utenti.keys())), 200
+
+
+@app.route('/', methods=['GET', 'POST'])
 def root():
     return redirect(url_for('static', filename='index.html'))
 
@@ -51,29 +61,61 @@ def load_user(username):
     return None
 
 
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET','POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('grafico'))
-    username = request.values['u']
-    password = request.values['p']
-    if username in usersdb and password == usersdb[username]:
-        login_user(User(username), remember=True)
-        return redirect(url_for('grafico'))
-    print("login fallito")
+    if request.method == 'POST':
+        if current_user.is_authenticated:
+            return redirect(url_for('grafico'))
+
+        username = request.values['u']
+        password = request.values['p']
+
+        if username in usersdb and password == usersdb[username]:
+            login_user(User(username), remember=True)
+            return redirect(url_for('grafico'))
+        print("login fallito")
+
     return redirect('/static/login.html')
 
 
-@app.route('/logout', methods=["POST"])
+@app.route('/logout', methods=["GET", "POST"])
+@login_required
 def logout():
     logout_user()
-    return redirect('/')
+    return redirect('/') #url_for('static', filename='index.html'
 
 
 @app.route('/grafico', methods=['GET'])
 @login_required
 def grafico():
-    '''
+    username = current_user.username
+
+    print(current_user.username)
+
+    collection_ref = db.collection(f'dati_Carla')
+    docs = collection_ref.stream()
+
+    # Process the data
+    data = []
+    for doc in docs:
+        doc_data = doc.to_dict()
+        data.append({
+            'X': doc_data['X'],
+            'Z': doc_data['Z']
+        })
+
+    # Sort data by Tempo
+    #data.sort(key=lambda x: x['Tempo'])
+
+    # Convert data to JSON
+    #data = json.dumps(data)
+
+    return json.dumps(data), 200
+
+'''
+@app.route('/grafico', methods=['GET'])
+@login_required
+def grafico():
     #prendi i dati dal file giusto
     user_id = request.args.get('user_id') #????
     collection_ref = db.collection(user_id)
@@ -81,75 +123,70 @@ def grafico():
     dati = [doc.to_dict() for doc in docs]
 
     return redirect(url_for('static', filename='grafico.html')), jsonify(dati)
-    '''
+
     return "ciao grafico"
-
 '''
-def prova_dati_su_gcloud():
-    directory_path = 'Dati'
-    bucket_name = 'pcloud24_1'
 
-    #accedo al cloud storage
-    storage_client = storage.Client.from_service_account_json('credentials.json')
+def upload_to_cloud_storage(file_path, bucket_name):
+    # Carica file su Google Cloud Storage
     bucket = storage_client.bucket(bucket_name)
+    blob_name = os.path.basename(file_path)
+    blob = bucket.blob(blob_name)
+    blob.upload_from_filename(file_path)
+    print(f"File {file_path} uploaded to {bucket_name}/{blob_name}.")
+    return blob
 
-    for filename in os.listdir(directory_path):
-        if os.path.isfile(os.path.join(directory_path, filename)):
-            # Genera un timestamp per ogni file
-            now = datetime.now()
-            current_time = now.strftime('%Y_%m_%d_%H_%M_%S')
-            blob_name = f'{filename}-{current_time}'
+def parse_csv_and_store_in_firestore(blob, collection_name):
+    # Prendi i dati CSV da Cloud Storage e memorizzali in Firestore
+    # Download contenuto del blob
 
-            #carica file su gcloud
-            blob = bucket.blob(blob_name)
-            file_path = os.path.join(directory_path, filename)
-            blob.upload_from_filename(file_path)
-            print("caricato")
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file: #crea file temporaneo
+        temp_filename = temp_file.name
 
-            save_file_to_firestore(blob, filename, current_time)
+    try:
+        # Download il contenuto del blob nel file temporaneo
+        blob.download_to_filename(temp_filename)
 
-def save_file_to_firestore(blob, filename, current_time):
-    db = 'livelyageing'
-    utenti = ['carla', 'lalla', 'luigi']
-    num_utenti = len(utenti)
+        # Analizza CSV
+        df = pd.read_csv(temp_filename, sep=';')
 
-    db = firestore.Client.from_service_account_json('credentials.json', database=db)
+        # converti il file in lista di dizionari
+        records = df.to_dict('records')
 
-    file_data = blob.download_as_text()
-    
-    for u in filename:
-        doc_ref = db.collection('utenti').document(f'{filename}')
-        
-        
-    prova_ref = doc_ref.collection('posizioni').document(())
-    doc_ref.set({
-        'filename': filename,
-        'content': file_data,
-        'timestamp': current_time
-    })
+        # Memorizza in Firestore
+        for record in records:
+            doc_id = f"{collection_name}_{str(record['Tempo']).replace(' ', '_').replace(':', '-')}"
+            doc_ref = db.collection(collection_name).document(doc_id)
+            doc_ref.set(record)
 
+        print(f"Data from {blob.name} stored in Firestore collection {collection_name}")
 
+    finally:
+        # Pulisci file temporaneo
+        os.unlink(temp_filename)
 
+def process_csv_files(local_directory, bucket_name, collection_prefix):
+    # Elabora tutti i file CSV in una cartella
+    for filename in os.listdir(local_directory):
+        if filename.endswith('.csv'):
+            file_path = os.path.join(local_directory, filename)
 
-def save_file_to_firestore(blob, filename, current_time):
-    # Inizializza il client di Firestore
-    firestore_client = firestore.Client()
+            # Carica su Cloud Storage
+            blob = upload_to_cloud_storage(file_path, bucket_name)
 
-    # Leggi il file dal blob
-    file_data = blob.download_as_text()
+            # Analizza e memorizza in Firestore
+            collection_name = f"{collection_prefix}_{os.path.splitext(filename)[0]}"
+            parse_csv_and_store_in_firestore(blob, collection_name)
 
-    # Salva i dati su Firestore
-    doc_ref = firestore_client.collection('files').document(f'{filename}-{current_time}')
-    doc_ref.set({
-        'filename': filename,
-        'content': file_data,
-        'timestamp': current_time
-    })
-
-    print(f'File {filename} salvato su Firestore')
-'''
 
 if __name__ == '__main__':
+    # carica i dati prima di far partire app Flask
+    local_directory = 'Dati'  # local directory con i file
+    bucket_name = 'pcloud24_1'  # nome del bucket su Google Cloud Storage
+    collection_prefix = 'dati' # prefisso per i dati della raccolta (ES: dati_Carla)
+
+    process_csv_files(local_directory, bucket_name, collection_prefix)
+
+
     app.run(host='0.0.0.0', port=80, debug=True)
 
-    #prova_dati_su_gcloud()
