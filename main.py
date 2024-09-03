@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import tempfile
 
-from flask import Flask, request, redirect, url_for, render_template_string
+from flask import Flask, request, redirect, url_for, render_template_string, jsonify
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
 import json
 from secret import secret_key
@@ -20,6 +20,8 @@ class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secret_key
+
+# da cambiare prima di caricare su cloud
 
 local = True
 
@@ -39,6 +41,12 @@ storage_client = storage.Client.from_service_account_json('credentials.json')
 usersdb = {
     'marta':'gabbi'
 }
+
+utenti = {}
+
+@app.route('/utenti',methods=['GET'])
+def utenti():
+    return json.dumps(list(utenti.keys())), 200
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -70,7 +78,7 @@ def login():
     return redirect('/static/login.html')
 
 
-@app.route('/logout', methods=["POST"])
+@app.route('/logout', methods=["GET", "POST"])
 @login_required
 def logout():
     logout_user()
@@ -83,18 +91,26 @@ def grafico():
     username = current_user.username
 
     print(current_user.username)
-    html_template = '''
-    <html>
-        <head>
-            <title>Grafico</title>
-        </head>
-        <body>
-            <h1>Benvenuto, {{ username }}!</h1>
-        </body>
-    </html>
-    '''
 
-    return render_template_string(html_template, username=username)
+    collection_ref = db.collection(f'dati_Carla')
+    docs = collection_ref.stream()
+
+    # Process the data
+    data = []
+    for doc in docs:
+        doc_data = doc.to_dict()
+        data.append({
+            'X': doc_data['X'],
+            'Z': doc_data['Z']
+        })
+
+    # Sort data by Tempo
+    #data.sort(key=lambda x: x['Tempo'])
+
+    # Convert data to JSON
+    #data = json.dumps(data)
+
+    return json.dumps(data), 200
 
 '''
 @app.route('/grafico', methods=['GET'])
