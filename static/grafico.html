@@ -78,13 +78,13 @@
 
 
 			<script type="text/javascript">
-    			google.charts.load('current', {'packages':['corechart', 'line']});
-        		google.charts.setOnLoadCallback(drawChart);
+				google.charts.load('current', {'packages':['corechart', 'line']});
+				google.charts.setOnLoadCallback(drawChart);
 
-        		function drawChart() {
-            		fetch('/grafico')
-                		.then(response => response.json())
-                		.then(data => {
+				function drawChart() {
+					fetch('/grafico')
+						.then(response => response.json())
+						.then(data => {
 							var chartData = new google.visualization.DataTable();
 							chartData.addColumn('number', 'X');
 							chartData.addColumn('number', 'Z');
@@ -97,14 +97,21 @@
 								title: 'X vs Z',
 								hAxis: {title: 'X'},
 								vAxis: {title: 'Z'},
-								legend: 'none'
+								legend: 'none',
+								series: {
+									0: { color: 'black' }
+								}
 							};
 
-                    		var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
-                    		chart.draw(chartData, options);
+							var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+							chart.draw(chartData, options);
 						});
 				}
 			</script>
+
+
+
+
 
 
 	</body>
