@@ -76,117 +76,34 @@
 			<script src="assets/js/main.js"></script>
 			<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
-		<!--$.get("http://localhost/utenti/u1", function(data, status){
-
-					var datav = JSON.parse(data); // supponendo che data contenga la stringa JSON
-
-					// Funzione per estrarre il primo e il terzo valore
-					function extractValues(row) {
-					  return [parseFloat(row[0]), parseFloat(row[2])];
-					}
-
-					// Applicare la funzione di estrazione a ogni riga
-					var filteredData = datav.map(extractValues);
-
-					console.log(filteredData);
-
-
-
-					google.charts.load('current', {packages: ['corechart', 'line']});
-					google.charts.setOnLoadCallback(drawBasic);
-
-					function drawBasic() {
-
-						var data = google.visualization.arrayToDataTable([
-							  ['X', 'Z'],
-							  {{data|safe}}
-						]);
-
-						var options = {
-							hAxis: {
-							  title: 'X'
-							},
-							vAxis: {
-							  title: 'Z'
-							}
-						};
-
-						var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
-
-						chart.draw(data, options);
-   					}
-
 
 			<script type="text/javascript">
+    			google.charts.load('current', {'packages':['corechart', 'line']});
+        		google.charts.setOnLoadCallback(drawChart);
 
-					google.charts.load('current', {packages: ['corechart', 'line']});
-					google.charts.setOnLoadCallback(drawBasic);
+        		function drawChart() {
+            		fetch('/grafico')
+                		.then(response => response.json())
+                		.then(data => {
+							var chartData = new google.visualization.DataTable();
+							chartData.addColumn('number', 'X');
+							chartData.addColumn('number', 'Z');
 
-					function drawBasic() {
+							data.forEach(item => {
+								chartData.addRow([item.X, item.Z]);
+							});
 
-						  var data = new google.visualization.DataTable();
-						  data.addColumn('number', 'X');
-						  data.addColumn('number', 'Z');
+							var options = {
+								title: 'X vs Z',
+								hAxis: {title: 'X'},
+								vAxis: {title: 'Z'},
+								legend: 'none'
+							};
 
-						  data.addRows(filteredData);
-
-						  var options = {
-							hAxis: {
-							  title: 'X'
-							},
-							vAxis: {
-							  title: 'Z'
-							}
-						  };
-
-						  var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
-
-						  chart.draw(data, options);
-   					}
-
-
-				})
-
-			</script>-->
-
-			<script type="text/javascript">
-				$.get("/grafico",function(datav, status){
-					datav = JSON.parse(datav)
-<!--
-					// Funzione per estrarre il primo e il terzo valore
-					function extractValues(row) {
-					 	return [parseFloat(row["X"]), parseFloat(row["Z"])];
-					}
-
-					// Applicare la funzione di estrazione a ogni riga
-					var filteredData = datav.map(extractValues);
-
-					console.log(filteredData);
--->
-					google.charts.load('current', {'packages':['corechart', 'line']});
-					google.charts.setOnLoadCallback(drawChart);
-
-					function drawChart() {
-
-						var data = new google.visualization.DataTable();
-						  data.addColumn('number', 'X');
-						  data.addColumn('number', 'Z');
-
-						  data.addRows(filteredData);
-
-						var options = {
-							hAxis: {
-							  title: 'X'
-							},
-							vAxis: {
-							  title: 'Z'
-							}
-						};
-
-						var chart = new google.visualization.LineChart(document.getElementById("chart_div"));
-						chart.draw(data, options);
-					}
-				})
+                    		var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+                    		chart.draw(chartData, options);
+						});
+				}
 			</script>
 
 
