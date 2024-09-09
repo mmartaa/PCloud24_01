@@ -3,7 +3,8 @@ import pandas as pd
 from datetime import datetime
 import tempfile
 
-from flask import Flask, request, redirect, url_for, render_template_string, jsonify, render_template
+from functools import wraps
+from flask import Flask, request, redirect, url_for, send_from_directory, jsonify, render_template, abort
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
 import json
 from secret import secret_key
@@ -12,18 +13,16 @@ from google.cloud import storage
 
 
 class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
-    def __init__(self, username):
+    def __init__(self, username, is_admin=False):
         super().__init__()
         self.id = username
         self.username = username
+        #self.is_admin
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secret_key
 
-# da cambiare prima di caricare su cloud
-
-local = True
 
 login = LoginManager(app)
 login.login_view = '/static/login.html'
@@ -32,22 +31,31 @@ login.login_view = '/static/login.html'
 db = 'livelyageing'
 
 #creo client per accedere a database firestore
-db = firestore.Client.from_service_account_json('credentials.json', database=db) if local else firestore.Client()
+db = firestore.Client.from_service_account_json('credentials.json', database=db)
 #client per accedere a cloud storage
 storage_client = storage.Client.from_service_account_json('credentials.json')
 
 
-
-usersdb = {
+admindb ={
     'marta':'gabbi'
 }
 
-utenti = {}
-
-@app.route('/utenti',methods=['GET'])
-def utenti():
-    return json.dumps(list(utenti.keys())), 200
-
+usersdb = {
+    'Carla':'carla',
+    'Francesco':'francesco',
+    'Lalla':'lalla',
+    'Luigi':'luigi',
+    'Luciano':'luciano'
+}
+'''
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_admin:  # Controlla se l'utente è admin
+            abort(403)  # Accesso negato
+        return f(*args, **kwargs)
+    return decorated_function
+'''
 
 @app.route('/', methods=['GET', 'POST'])
 def root():
@@ -65,15 +73,21 @@ def load_user(username):
 def login():
     if request.method == 'POST':
         if current_user.is_authenticated:
-            return redirect(url_for('grafico'))
+            return redirect(url_for('data'))
 
         username = request.values['u']
         password = request.values['p']
 
         if username in usersdb and password == usersdb[username]:
             login_user(User(username), remember=True)
-            return redirect(url_for('grafico'))
-        print("login fallito")
+            return redirect(url_for('data'))
+        print("login utente fallito")
+
+        if username in admindb and password == admindb[username]:
+            login_user(User(username), remember=True)
+            print(current_user.username)
+            return redirect(url_for('static', filename='main_admin.html'))
+        print("login admin fallito")
 
     return redirect('/static/login.html')
 
@@ -82,17 +96,49 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return redirect('/') #url_for('static', filename='index.html'
+    return redirect('/')
 
+
+#@app.route('/utenti',methods=['GET'])
+# @admin_required
+
+#@app.route('/utenti', methods=['GET'])
+#def utenti():
+#    return jsonify(list(usersdb.keys())), 200
+
+
+@app.route('/utenti/<username>', methods=['GET'])
+def get_user_graph(username):
+    collection_ref = db.collection(f'dati_{username}')
+    docs = collection_ref.stream()
+
+    data = []
+    for doc in docs:
+        doc_data = doc.to_dict()
+        data.append({
+            'X': doc_data['X'],
+            'Z': doc_data['Z'],
+            'Tempo': doc_data['Tempo']
+        })
+
+    return jsonify(data)
+
+'''
+# Pagina HTML statica
+@app.route('/prova/<username>', methods=['GET'])
+@login_required
+def prova(username):
+    #return redirect(url_for('static', filename='user_chart2.html'))
+    return send_from_directory('static', 'user_chart2.html')
+'''
 
 @app.route('/grafico', methods=['GET'])
 @login_required
 def grafico():
     username = current_user.username
-
     print(current_user.username)
 
-    collection_ref = db.collection(f'dati_Carla')
+    collection_ref = db.collection(f'dati_%s'%username) # il % fa da segnaposto
     docs = collection_ref.stream()
 
     # Process the data
@@ -101,21 +147,20 @@ def grafico():
         doc_data = doc.to_dict()
         data.append({
             'X': doc_data['X'],
-            'Z': doc_data['Z']
+            'Z': doc_data['Z'],
+            'Tempo': doc_data['Tempo']
         })
 
-
-    # Convert data to JSON
-    #data = json.dumps(data)
-
-    #return json.dumps(data), 200
     return jsonify(data)
 
-@app.route('/chart', methods=['GET'])
+@app.route('/data', methods=['GET'])
 @login_required
-def chart():
+def data():
     return redirect(url_for('static', filename='grafico.html'))
 
+
+
+# CARICA FILE SU CLOUD STORAGE E MEMORIZZA SU FIRESTORE
 
 def upload_to_cloud_storage(file_path, bucket_name):
     # Carica file su Google Cloud Storage

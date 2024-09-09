@@ -2,11 +2,11 @@
 
 <html>
 	<head>
-		<title>Mappa - Lively Ageing</title>
+		<title>Grafico - Lively Ageing</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" href="assets/css/main.css" />
-		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+		<link rel="stylesheet" href="/static/assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="/static/assets/css/noscript.css" /></noscript>
 	</head>
 	<body class="is-preload">
 
@@ -45,9 +45,9 @@
 										<h1>Grafico</h1>
 									</header>
 									<div class = "chart-container" style="display: flex; align-items: flex-start;">
-										<div id="chart_div" style="width: 600px; height: 400px;"></div>
+										<div id="graph_div" style="width: 600px; height: 400px;"></div>
 
-										<div id="results" style="
+										<div id="risultati" style="
 											margin-left: 20px;
 											padding: 10px;
 											border: 1px solid #ddd;
@@ -66,18 +66,25 @@
 			</div>
 
 		<!-- Scripts -->
-			<script src="assets/js/jquery.min.js"></script>
-			<script src="assets/js/jquery.scrolly.min.js"></script>
-			<script src="assets/js/jquery.scrollex.min.js"></script>
-			<script src="assets/js/browser.min.js"></script>
-			<script src="assets/js/breakpoints.min.js"></script>
-			<script src="assets/js/util.js"></script>
-			<script src="assets/js/main.js"></script>
+			<script src="/static/assets/js/jquery.min.js"></script>
+			<script src="/static/assets/js/jquery.scrolly.min.js"></script>
+			<script src="/static/assets/js/jquery.scrollex.min.js"></script>
+			<script src="/static/assets/js/browser.min.js"></script>
+			<script src="/static/assets/js/breakpoints.min.js"></script>
+			<script src="/static/assets/js/util.js"></script>
+			<script src="/static/assets/js/main.js"></script>
 			<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
+
 			<script type="text/javascript">
+
 				google.charts.load('current', {'packages':['corechart', 'line']});
 				google.charts.setOnLoadCallback(drawChart);
+
+				function getUsernameFromURL() {
+					const urlParams = new URLSearchParams(window.location.search);
+					return urlParams.get('username');
+				}
 
 				function convertToSeconds(timeStr) {
     				const [hours, minutes, seconds] = timeStr.split(':').map(Number);
@@ -85,13 +92,15 @@
   				}
 
 				function drawChart() {
-					fetch('/grafico')
+
+					const username = getUsernameFromURL();
+
+					fetch(`/utenti/${username}`)
 						.then(response => response.json())
 						.then(data => {
 							var chartData = new google.visualization.DataTable();
 							chartData.addColumn('number', 'X');
 							chartData.addColumn('number', 'Z');
-
 
 							let distanzaTotale = 0;
 
@@ -116,9 +125,8 @@
         					let minuti = Math.floor(tempoTotale / 60);
         					let secondi = tempoTotale % 60;
 
-
 							var options = {
-								title: 'X vs Z',
+								title: 'Grafico dei Dati di ' + username,
 								hAxis: {title: 'X'},
 								vAxis: {title: 'Z'},
 								legend: 'none',
@@ -127,17 +135,18 @@
 								}
 							};
 
-							var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+							var chart = new google.visualization.LineChart(document.getElementById('graph_div'));
 							chart.draw(chartData, options);
 
-							document.getElementById('results').innerHTML = `
+							document.getElementById('risultati').innerHTML = `
   								<p>Distanza totale percorsa: ${distanzaTotale.toFixed(2)} metri</p>
 								<p>Tempo impiegato: ${minuti} minuti e ${secondi} secondi</p>
 							`;
-
 						});
+
 				}
 			</script>
+
 
 
 	</body>
