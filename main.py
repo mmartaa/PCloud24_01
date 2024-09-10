@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import tempfile
-
+import logging
 
 from flask import Flask, request, redirect, url_for, jsonify
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
@@ -9,6 +9,8 @@ from secret import secret_key
 from google.cloud import firestore
 from google.cloud import storage
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
     def __init__(self, username, is_admin=False):
@@ -197,7 +199,7 @@ def data():
 
 
 # CARICA FILE SU CLOUD STORAGE E MEMORIZZA SU FIRESTORE
-
+'''
 def upload_to_cloud_storage(file_path, bucket_name):
     # Carica file su Google Cloud Storage
     bucket = storage_client.bucket(bucket_name)
@@ -261,21 +263,32 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
 
 '''
-
-
 def upload_to_cloud_storage(file_path, bucket_name):
-    bucket = storage_client.bucket(bucket_name)
-    blob_name = os.path.basename(file_path)
-    blob = bucket.blob(blob_name)
+    try:
+        bucket = storage_client.bucket(bucket_name)
+        blob_name = os.path.basename(file_path)
+        blob = bucket.blob(blob_name)
 
-    with open(file_path, 'rb') as file:
-        blob.upload_from_file(file)
+        logger.info(f"Attempting to upload file: {file_path}")
 
-    print(f"File {file_path} uploaded to {bucket_name}/{blob_name}.")
-    return blob
+        if not os.path.exists(file_path):
+            logger.error(f"File not found: {file_path}")
+            return None
 
+        with open(file_path, 'rb') as file:
+            blob.upload_from_file(file)
+
+        logger.info(f"File {file_path} uploaded to {bucket_name}/{blob_name}.")
+        return blob
+    except Exception as e:
+        logger.error(f"Error uploading file {file_path}: {str(e)}")
+        return None
 
 def store_in_firestore(blob, collection_name):
+    if not blob:
+        logger.error(f"No blob provided for collection {collection_name}")
+        return
+
     with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
         temp_filename = temp_file.name
 
@@ -289,38 +302,49 @@ def store_in_firestore(blob, collection_name):
             doc_ref = db.collection(collection_name).document(doc_id)
             doc_ref.set(record)
 
-        print(f"Data from {blob.name} stored in Firestore collection {collection_name}")
+        logger.info(f"Data from {blob.name} stored in Firestore collection {collection_name}")
 
+    except Exception as e:
+        logger.error(f"Error processing blob {blob.name}: {str(e)}")
     finally:
         os.unlink(temp_filename)
 
-
 def process_csv_files(local_directory, bucket_name, collection_prefix):
+    logger.info(f"Processing CSV files from directory: {local_directory}")
+
+    if not os.path.exists(local_directory):
+        logger.error(f"Directory not found: {local_directory}")
+        return
+
     for filename in os.listdir(local_directory):
         if filename.endswith('.csv'):
             file_path = os.path.join(local_directory, filename)
-            blob = upload_to_cloud_storage(file_path, bucket_name)
-            collection_name = f"{collection_prefix}_{os.path.splitext(filename)[0]}"
-            store_in_firestore(blob, collection_name)
+            logger.info(f"Processing file: {file_path}")
 
+            blob = upload_to_cloud_storage(file_path, bucket_name)
+            if blob:
+                collection_name = f"{collection_prefix}_{os.path.splitext(filename)[0]}"
+                store_in_firestore(blob, collection_name)
+            else:
+                logger.error(f"Failed to upload file: {file_path}")
 
 if __name__ == '__main__':
-    local_directory = os.path.join(os.path.dirname(__file__), 'Dati')
+    # Determine the base directory
+    if os.getenv('GAE_ENV', '').startswith('standard'):
+        # If on App Engine, use the root of the application
+        base_dir = '/app'
+    else:
+        # If running locally or in Cloud Shell, use the current directory
+        base_dir = os.getcwd()
+
+    local_directory = os.path.join(base_dir, 'Dati')
     bucket_name = 'pcloud24_1'
     collection_prefix = 'dati'
 
-    # Check if running on GCP (App Engine)
-    if os.getenv('GAE_ENV', '').startswith('standard'):
-        # If on GCP, assume files are already in Cloud Storage
-        bucket = storage_client.bucket(bucket_name)
-        blobs = bucket.list_blobs(prefix='Dati/')
-        for blob in blobs:
-            if blob.name.endswith('.csv'):
-                collection_name = f"{collection_prefix}_{os.path.splitext(os.path.basename(blob.name))[0]}"
-                store_in_firestore(blob, collection_name)
-    else:
-        # If running locally, process files from local directory
-        process_csv_files(local_directory, bucket_name, collection_prefix)
+    logger.info(f"Base directory: {base_dir}")
+    logger.info(f"Local directory for CSV files: {local_directory}")
+
+    # Always process files from the local directory
+    process_csv_files(local_directory, bucket_name, collection_prefix)
 
     app.run(host='0.0.0.0', port=8080, debug=True)
-'''
