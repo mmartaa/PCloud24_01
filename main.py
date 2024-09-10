@@ -51,6 +51,7 @@ def admin_required(f):
     return decorated_function
 '''
 
+
 @app.route('/', methods=['GET', 'POST'])
 def root():
     return redirect(url_for('static', filename='index.html'))
@@ -95,7 +96,7 @@ def logout():
     return redirect('/')
 
 
-def convert_to_seconds(time_str):
+def convertToSeconds(time_str):
     hours, minutes, seconds = map(int, time_str.split(':'))
     return hours * 3600 + minutes * 60 + seconds
 
@@ -128,8 +129,8 @@ def media_distanza_tempo(usersdb):
 
         # calcolo tempo
         if len(tempi) > 0:
-            tempoInizio = convert_to_seconds(tempi[0])
-            tempoFine = convert_to_seconds(tempi[-1])
+            tempoInizio = convertToSeconds(tempi[0])
+            tempoFine = convertToSeconds(tempi[-1])
             tempo_delta = tempoFine - tempoInizio
             totale_tempo += tempo_delta
 
@@ -149,7 +150,6 @@ def media_distanza_tempo(usersdb):
 
 
 @app.route('/utenti/<username>', methods=['GET'])
-@login_required
 def user_graph(username):
     collection_ref = db.collection(f'dati_{username}')
     docs = collection_ref.stream()
