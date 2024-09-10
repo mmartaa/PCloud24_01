@@ -42,7 +42,9 @@ admindb ={
 usersdb = {
     'Carla':'carla',
     'Francesco':'francesco',
-    'Luigi': 'luigi'
+    'Luigi': 'luigi',
+    'Lalla':'lalla',
+    'Luciano':'luciano'
 }
 
 
