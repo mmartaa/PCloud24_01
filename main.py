@@ -188,6 +188,7 @@ def grafico():
             'Tempo': doc_data['Tempo']
         })
 
+
     return jsonify(data)
 
 
