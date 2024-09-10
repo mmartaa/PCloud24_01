@@ -262,6 +262,7 @@ if __name__ == '__main__':
 
 '''
 
+
 def upload_to_cloud_storage(file_path, bucket_name):
     bucket = storage_client.bucket(bucket_name)
     blob_name = os.path.basename(file_path)
