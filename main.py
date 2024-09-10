@@ -39,17 +39,10 @@ admindb ={
 
 usersdb = {
     'Carla':'carla',
-    'Francesco':'francesco'
+    'Francesco':'francesco',
+    'Luigi': 'luigi'
 }
-'''
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_admin:  # Controlla se l'utente è admin
-            abort(403)  # Accesso negato
-        return f(*args, **kwargs)
-    return decorated_function
-'''
+
 
 
 @app.route('/', methods=['GET', 'POST'])
