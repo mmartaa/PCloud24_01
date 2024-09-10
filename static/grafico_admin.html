@@ -58,14 +58,6 @@
 											flex-direction: column;
 											align-items: flex-start;
 										">
-											<p style="font-weight: bold; margin-bottom: 5px;">Distanza totale percorsa:</p>
-											<p id="distanza_totale" style="margin-bottom: 15px;"></p>
-											<p style="font-weight: bold; margin-bottom: 5px;">Tempo impiegato:</p>
-											<p id="tempo_impiegato" style="margin-bottom: 15px;"></p>
-											<p style="font-weight: bold; margin-bottom: 5px;">Media di tutti gli utenti:</p>
-											<p id="media_distanza" style="margin-bottom: 15px;"></p>
-											<p style="font-weight: bold; margin-bottom: 5px;">Tempo medio impiegato:</p>
-											<p id="media_tempo"></p>
 										</div>
 									</div>
 								</div>
@@ -165,7 +157,7 @@
 							let mediaSecondi = tempoMedio.secondi;
 
 							var options = {
-								title: 'Spostamenti di ' + username + ' durante l'attività',
+								title: 'Grafico degli spostamenti di ' + username,
 								hAxis: {title: 'X'},
 								vAxis: {title: 'Z'},
 								legend: 'none',
