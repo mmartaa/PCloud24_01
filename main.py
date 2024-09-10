@@ -197,7 +197,7 @@ def data():
 
 
 # CARICA FILE SU CLOUD STORAGE E MEMORIZZA SU FIRESTORE
-'''
+
 def upload_to_cloud_storage(file_path, bucket_name):
     # Carica file su Google Cloud Storage
     bucket = storage_client.bucket(bucket_name)
@@ -259,8 +259,8 @@ if __name__ == '__main__':
 
 
     app.run(host='0.0.0.0', port=80, debug=True)
-'''
 
+'''
 
 def upload_to_cloud_storage(file_path, bucket_name):
     bucket = storage_client.bucket(bucket_name)
@@ -322,3 +322,4 @@ if __name__ == '__main__':
         process_csv_files(local_directory, bucket_name, collection_prefix)
 
     app.run(host='0.0.0.0', port=8080, debug=True)
+'''
