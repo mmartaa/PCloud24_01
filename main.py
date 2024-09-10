@@ -197,7 +197,7 @@ def data():
 
 
 # CARICA FILE SU CLOUD STORAGE E MEMORIZZA SU FIRESTORE
-
+'''
 def upload_to_cloud_storage(file_path, bucket_name):
     # Carica file su Google Cloud Storage
     bucket = storage_client.bucket(bucket_name)
@@ -259,4 +259,66 @@ if __name__ == '__main__':
 
 
     app.run(host='0.0.0.0', port=80, debug=True)
+'''
 
+
+def upload_to_cloud_storage(file_path, bucket_name):
+    bucket = storage_client.bucket(bucket_name)
+    blob_name = os.path.basename(file_path)
+    blob = bucket.blob(blob_name)
+
+    with open(file_path, 'rb') as file:
+        blob.upload_from_file(file)
+
+    print(f"File {file_path} uploaded to {bucket_name}/{blob_name}.")
+    return blob
+
+
+def store_in_firestore(blob, collection_name):
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
+        temp_filename = temp_file.name
+
+    try:
+        blob.download_to_filename(temp_filename)
+        df = pd.read_csv(temp_filename, sep=';')
+        records = df.to_dict('records')
+
+        for record in records:
+            doc_id = f"{collection_name}_{str(record['Tempo']).replace(' ', '_').replace(':', '-')}"
+            doc_ref = db.collection(collection_name).document(doc_id)
+            doc_ref.set(record)
+
+        print(f"Data from {blob.name} stored in Firestore collection {collection_name}")
+
+    finally:
+        os.unlink(temp_filename)
+
+
+def process_csv_files(local_directory, bucket_name, collection_prefix):
+    for filename in os.listdir(local_directory):
+        if filename.endswith('.csv'):
+            file_path = os.path.join(local_directory, filename)
+            blob = upload_to_cloud_storage(file_path, bucket_name)
+            collection_name = f"{collection_prefix}_{os.path.splitext(filename)[0]}"
+            store_in_firestore(blob, collection_name)
+
+
+if __name__ == '__main__':
+    local_directory = os.path.join(os.path.dirname(__file__), 'Dati')
+    bucket_name = 'pcloud24_1'
+    collection_prefix = 'dati'
+
+    # Check if running on GCP (App Engine)
+    if os.getenv('GAE_ENV', '').startswith('standard'):
+        # If on GCP, assume files are already in Cloud Storage
+        bucket = storage_client.bucket(bucket_name)
+        blobs = bucket.list_blobs(prefix='Dati/')
+        for blob in blobs:
+            if blob.name.endswith('.csv'):
+                collection_name = f"{collection_prefix}_{os.path.splitext(os.path.basename(blob.name))[0]}"
+                store_in_firestore(blob, collection_name)
+    else:
+        # If running locally, process files from local directory
+        process_csv_files(local_directory, bucket_name, collection_prefix)
+
+    app.run(host='0.0.0.0', port=8080, debug=True)
