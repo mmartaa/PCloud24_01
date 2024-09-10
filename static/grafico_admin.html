@@ -25,13 +25,14 @@
 					<nav id="menu">
 						<ul class="links">
 							<li><a href="index.html">Home</a></li>
-							<li><a href="landing.html">Landing</a></li>
-							<li><a href="generic.html">Generic</a></li>
-							<li><a href="elements.html">Elements</a></li>
+							<li><a href="landing.html">About</a></li>
 						</ul>
 						<ul class="actions stacked">
-							<li><a href="#" class="button primary fit">Get Started</a></li>
-							<li><a href="#" class="button fit">Log In</a></li>
+							<li>
+								<form action="/logout" method="POST" style="display:inline;">
+									<button type="submit" class="button fit">Log Out</button>
+								</form>
+							</li>
 						</ul>
 					</nav>
 
@@ -42,20 +43,29 @@
 							<section id="one">
 								<div class="inner">
 									<header class="major">
-										<h1>Grafico</h1>
+    									<h1 id="page-title">Grafico e Dati di</h1>
 									</header>
-									<div class = "chart-container" style="display: flex; align-items: flex-start;">
-										<div id="graph_div" style="width: 600px; height: 400px;"></div>
-
+									<div class="chart-container" style="display: flex; flex-direction: row; align-items: flex-start;">
+										<div id="graph_div" style="flex: 2; height: 400px;"></div>
 										<div id="risultati" style="
+											flex: 2;
 											margin-left: 20px;
 											padding: 10px;
-											border: 1px solid #ddd;
-											width: 200px;
-											background-color: #f9f9f9;
-											text-align: left;
-											color: black;
-										"></div>
+											background-color: transparent;
+											color: white;
+											display: flex;
+											flex-direction: column;
+											align-items: flex-start;
+										">
+											<p style="font-weight: bold; margin-bottom: 5px;">Distanza totale percorsa:</p>
+											<p id="distanza_totale" style="margin-bottom: 15px;"></p>
+											<p style="font-weight: bold; margin-bottom: 5px;">Tempo impiegato:</p>
+											<p id="tempo_impiegato" style="margin-bottom: 15px;"></p>
+											<p style="font-weight: bold; margin-bottom: 5px;">Media di tutti gli utenti:</p>
+											<p id="media_distanza" style="margin-bottom: 15px;"></p>
+											<p style="font-weight: bold; margin-bottom: 5px;">Tempo medio impiegato:</p>
+											<p id="media_tempo"></p>
+										</div>
 									</div>
 								</div>
 							</section>
@@ -74,6 +84,27 @@
 			<script src="/static/assets/js/util.js"></script>
 			<script src="/static/assets/js/main.js"></script>
 			<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+			<script type="text/javascript">
+				function getUsernameFromURL() {
+					const urlParams = new URLSearchParams(window.location.search);
+					return urlParams.get('username');
+				}
+
+				function updateTitle() {
+					const username = getUsernameFromURL();
+					const titleElement = document.getElementById('page-title');
+					if (username) {
+						titleElement.textContent = `Grafico e Dati di ${username}`;
+					} else {
+						titleElement.textContent = 'Grafico e Dati';
+					}
+				}
+
+				// Esegui updateTitle quando il documento è pronto
+				document.addEventListener('DOMContentLoaded', updateTitle);
+			</script>
+
 
 
 			<script type="text/javascript">
@@ -98,22 +129,26 @@
 					fetch(`/utenti/${username}`)
 						.then(response => response.json())
 						.then(data => {
+
+							const distanzaMedia = data.distanza_media;
+                			const tempoMedio = data.tempo_medio;
+
 							var chartData = new google.visualization.DataTable();
 							chartData.addColumn('number', 'X');
 							chartData.addColumn('number', 'Z');
 
 							let distanzaTotale = 0;
 
-							let tempoInizio = convertToSeconds(data[0].Tempo);
-        					let tempoFine = convertToSeconds(data[data.length - 1].Tempo);
+							let tempoInizio = convertToSeconds(data.utente_data[0].Tempo);
+        					let tempoFine = convertToSeconds(data.utente_data[data.utente_data.length - 1].Tempo);
 
 
-							data.forEach((item, index) => {
+							data.utente_data.forEach((item, index) => {
 								chartData.addRow([item.X, item.Z]);
 
 								if (index > 0) {
-									let deltaX = data[index].X - data[index - 1].X;
-                					let deltaZ = data[index].Z - data[index - 1].Z;
+									let deltaX = data.utente_data[index].X - data.utente_data[index - 1].X;
+                					let deltaZ = data.utente_data[index].Z - data.utente_data[index - 1].Z;
 
                 					let distanzaTraPunti = Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaZ, 2));
                 					distanzaTotale += distanzaTraPunti;
@@ -124,6 +159,9 @@
 							let tempoTotale = tempoFine - tempoInizio;
         					let minuti = Math.floor(tempoTotale / 60);
         					let secondi = tempoTotale % 60;
+
+        					let mediaMinuti = tempoMedio.minuti;
+							let mediaSecondi = tempoMedio.secondi;
 
 							var options = {
 								title: 'Grafico dei Dati di ' + username,
@@ -139,8 +177,11 @@
 							chart.draw(chartData, options);
 
 							document.getElementById('risultati').innerHTML = `
-  								<p>Distanza totale percorsa: ${distanzaTotale.toFixed(2)} metri</p>
+								<p>Distanza totale percorsa: ${distanzaTotale.toFixed(2)} metri</p>
 								<p>Tempo impiegato: ${minuti} minuti e ${secondi} secondi</p>
+								<p><strong>Media di tutti gli utenti:</strong></p>
+								<p>Distanza media: ${distanzaMedia.toFixed(2)} metri</p>
+								<p>Tempo medio impiegato: ${mediaMinuti} minuti e ${mediaSecondi} secondi</p>
 							`;
 						});
 

@@ -1,12 +1,10 @@
 import os
 import pandas as pd
-from datetime import datetime
 import tempfile
 
-from functools import wraps
-from flask import Flask, request, redirect, url_for, send_from_directory, jsonify, render_template, abort
+
+from flask import Flask, request, redirect, url_for, jsonify
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
-import json
 from secret import secret_key
 from google.cloud import firestore
 from google.cloud import storage
@@ -17,19 +15,17 @@ class User(UserMixin): #classe utente che rappresenta gli utenti del sistema
         super().__init__()
         self.id = username
         self.username = username
-        #self.is_admin
+
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secret_key
-
 
 login = LoginManager(app)
 login.login_view = '/static/login.html'
 
 
 db = 'livelyageing'
-
 #creo client per accedere a database firestore
 db = firestore.Client.from_service_account_json('credentials.json', database=db)
 #client per accedere a cloud storage
@@ -40,12 +36,10 @@ admindb ={
     'marta':'gabbi'
 }
 
+
 usersdb = {
     'Carla':'carla',
-    'Francesco':'francesco',
-    'Lalla':'lalla',
-    'Luigi':'luigi',
-    'Luciano':'luciano'
+    'Francesco':'francesco'
 }
 '''
 def admin_required(f):
@@ -78,11 +72,13 @@ def login():
         username = request.values['u']
         password = request.values['p']
 
+        # controlla se username e password sono in usersdb
         if username in usersdb and password == usersdb[username]:
             login_user(User(username), remember=True)
             return redirect(url_for('data'))
         print("login utente fallito")
 
+        # controlla se username e password sono in admindb
         if username in admindb and password == admindb[username]:
             login_user(User(username), remember=True)
             print(current_user.username)
@@ -99,16 +95,62 @@ def logout():
     return redirect('/')
 
 
-#@app.route('/utenti',methods=['GET'])
-# @admin_required
+def convert_to_seconds(time_str):
+    hours, minutes, seconds = map(int, time_str.split(':'))
+    return hours * 3600 + minutes * 60 + seconds
 
-#@app.route('/utenti', methods=['GET'])
-#def utenti():
-#    return jsonify(list(usersdb.keys())), 200
+
+def media_distanza_tempo(usersdb):
+    totale_tempo = 0
+    totale_distanza = 0
+    numero_utenti = len(usersdb)
+
+    for username in usersdb.keys():
+        collection_ref = db.collection(f'dati_{username}')
+        docs = collection_ref.stream()
+
+        distanza_utente = 0
+        punti = []
+        tempi = []
+        for doc in docs:
+            doc_data = doc.to_dict()
+            punti.append((doc_data['X'], doc_data['Z']))
+            tempi.append(doc_data['Tempo'])
+
+        # calcolo distanza
+        for i in range(1, len(punti)):
+            delta_x = punti[i][0] - punti[i - 1][0]
+            delta_z = punti[i][1] - punti[i - 1][1]
+            distanza_utente += (delta_x**2 + delta_z**2) ** 0.5
+
+        totale_distanza += distanza_utente
+        print(totale_distanza)
+
+        # calcolo tempo
+        if len(tempi) > 0:
+            tempoInizio = convert_to_seconds(tempi[0])
+            tempoFine = convert_to_seconds(tempi[-1])
+            tempo_delta = tempoFine - tempoInizio
+            totale_tempo += tempo_delta
+
+    # calcolo distanza e tempo medi
+    if numero_utenti > 0:
+        distanza_media = totale_distanza / numero_utenti
+        tempo_medio = totale_tempo / numero_utenti
+
+        minuti_medi = int(tempo_medio // 60)
+        secondi_medi = int(tempo_medio % 60)
+    else:
+        distanza_media = 0
+        minuti_medi = 0
+        secondi_medi = 0
+
+    return distanza_media, minuti_medi, secondi_medi
 
 
 @app.route('/utenti/<username>', methods=['GET'])
-def get_user_graph(username):
+@login_required
+def user_graph(username):
     collection_ref = db.collection(f'dati_{username}')
     docs = collection_ref.stream()
 
@@ -121,18 +163,19 @@ def get_user_graph(username):
             'Tempo': doc_data['Tempo']
         })
 
-    return jsonify(data)
+    distanza_media, minuti_medi, secondi_medi = media_distanza_tempo(usersdb)
 
-'''
-# Pagina HTML statica
-@app.route('/prova/<username>', methods=['GET'])
-@login_required
-def prova(username):
-    #return redirect(url_for('static', filename='user_chart2.html'))
-    return send_from_directory('static', 'user_chart2.html')
-'''
+    return jsonify({
+        'utente_data': data,
+        'distanza_media': distanza_media,
+        'tempo_medio': {
+            'minuti': minuti_medi,
+            'secondi': secondi_medi
+        }
+    })
 
-@app.route('/grafico', methods=['GET'])
+
+@app.route('/grafico', methods=['GET']) # grafico per il singolo utente
 @login_required
 def grafico():
     username = current_user.username
@@ -141,7 +184,6 @@ def grafico():
     collection_ref = db.collection(f'dati_%s'%username) # il % fa da segnaposto
     docs = collection_ref.stream()
 
-    # Process the data
     data = []
     for doc in docs:
         doc_data = doc.to_dict()
@@ -152,6 +194,7 @@ def grafico():
         })
 
     return jsonify(data)
+
 
 @app.route('/data', methods=['GET'])
 @login_required
@@ -171,10 +214,9 @@ def upload_to_cloud_storage(file_path, bucket_name):
     print(f"File {file_path} uploaded to {bucket_name}/{blob_name}.")
     return blob
 
-def parse_csv_and_store_in_firestore(blob, collection_name):
+def store_in_firestore(blob, collection_name):
     # Prendi i dati CSV da Cloud Storage e memorizzali in Firestore
     # Download contenuto del blob
-
     with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file: #crea file temporaneo
         temp_filename = temp_file.name
 
@@ -211,12 +253,12 @@ def process_csv_files(local_directory, bucket_name, collection_prefix):
 
             # Analizza e memorizza in Firestore
             collection_name = f"{collection_prefix}_{os.path.splitext(filename)[0]}"
-            parse_csv_and_store_in_firestore(blob, collection_name)
+            store_in_firestore(blob, collection_name)
 
 
 if __name__ == '__main__':
     # carica i dati prima di far partire app Flask
-    local_directory = 'Dati'  # local directory con i file
+    local_directory = 'Dati'  # local directory con i file csv
     bucket_name = 'pcloud24_1'  # nome del bucket su Google Cloud Storage
     collection_prefix = 'dati' # prefisso per i dati della raccolta (ES: dati_Carla)
 

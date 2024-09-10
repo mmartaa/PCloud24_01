@@ -2,7 +2,7 @@
 
 <html>
 	<head>
-		<title>Mappa - Lively Ageing</title>
+		<title>Grafico - Lively Ageing</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		<link rel="stylesheet" href="assets/css/main.css" />
@@ -25,13 +25,14 @@
 					<nav id="menu">
 						<ul class="links">
 							<li><a href="index.html">Home</a></li>
-							<li><a href="landing.html">Landing</a></li>
-							<li><a href="generic.html">Generic</a></li>
-							<li><a href="elements.html">Elements</a></li>
+							<li><a href="landing.html">About</a></li>
 						</ul>
 						<ul class="actions stacked">
-							<li><a href="#" class="button primary fit">Get Started</a></li>
-							<li><a href="#" class="button fit">Log In</a></li>
+							<li>
+								<form action="/logout" method="POST" style="display:inline;">
+									<button type="submit" class="button fit">Log Out</button>
+								</form>
+							</li>
 						</ul>
 					</nav>
 
@@ -42,20 +43,25 @@
 							<section id="one">
 								<div class="inner">
 									<header class="major">
-										<h1>Grafico</h1>
+										<h1>Grafico e Dati</h1>
 									</header>
-									<div class = "chart-container" style="display: flex; align-items: flex-start;">
-										<div id="chart_div" style="width: 600px; height: 400px;"></div>
-
+									<div class="chart-container" style="display: flex; flex-direction: row; align-items: flex-start;">
+										<div id="chart_div" style="flex: 2; height: 400px;"></div>
 										<div id="results" style="
+											flex: 2;
 											margin-left: 20px;
 											padding: 10px;
-											border: 1px solid #ddd;
-											width: 200px;
-											background-color: #f9f9f9;
-											text-align: left;
-											color: black;
-										"></div>
+											background-color: transparent;
+											color: white;
+											display: flex;
+											flex-direction: column;
+											align-items: flex-start;
+										">
+											<p style="font-weight: bold; margin-bottom: 5px;">Distanza totale percorsa:</p>
+											<p id="distanza_totale" style="margin-bottom: 15px;"></p>
+											<p style="font-weight: bold; margin-bottom: 5px;">Tempo impiegato:</p>
+											<p id="tempo_impiegato" style="margin-bottom: 15px;"></p>
+										</div>
 									</div>
 								</div>
 							</section>
