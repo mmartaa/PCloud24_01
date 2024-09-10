@@ -176,7 +176,7 @@ def grafico():
     username = current_user.username
     print(current_user.username)
 
-    collection_ref = db.collection(f'dati_%s'%username) # il % fa da segnaposto
+    collection_ref = db.collection(f'dati_{username}')
     docs = collection_ref.stream()
 
     data = []
