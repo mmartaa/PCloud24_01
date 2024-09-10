@@ -263,17 +263,15 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
 
 '''
+
+
 def upload_to_cloud_storage(file_path, bucket_name):
     try:
         bucket = storage_client.bucket(bucket_name)
         blob_name = os.path.basename(file_path)
         blob = bucket.blob(blob_name)
 
-        logger.info(f"Attempting to upload file: {file_path}")
-
-        if not os.path.exists(file_path):
-            logger.error(f"File not found: {file_path}")
-            return None
+        logger.info(f"Uploading file: {file_path}")
 
         with open(file_path, 'rb') as file:
             blob.upload_from_file(file)
@@ -284,30 +282,47 @@ def upload_to_cloud_storage(file_path, bucket_name):
         logger.error(f"Error uploading file {file_path}: {str(e)}")
         return None
 
+
 def store_in_firestore(blob, collection_name):
-    if not blob:
-        logger.error(f"No blob provided for collection {collection_name}")
-        return
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
-        temp_filename = temp_file.name
-
     try:
+        # Crea un file temporaneo
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
+            temp_filename = temp_file.name
+
+        # Scarica il contenuto del blob nel file temporaneo
         blob.download_to_filename(temp_filename)
-        df = pd.read_csv(temp_filename, sep=';')
+
+        # Leggi il CSV dal file temporaneo
+        df = pd.read_csv(temp_filename, sep=';', encoding='utf-8')
+
+        # Assicurati che i nomi delle colonne corrispondano
+        expected_columns = ['X', 'Y', 'Z', 'Tempo']
+        if not all(col in df.columns for col in expected_columns):
+            raise ValueError(
+                f"Le colonne del CSV non corrispondono. Attese: {expected_columns}, Trovate: {df.columns.tolist()}")
+
         records = df.to_dict('records')
 
+        # Batch write per migliorare le prestazioni
+        batch = db.batch()
         for record in records:
-            doc_id = f"{collection_name}_{str(record['Tempo']).replace(' ', '_').replace(':', '-')}"
+            # Usa il timestamp come parte dell'ID del documento
+            doc_id = f"{collection_name}_{record['Tempo'].replace(':', '-')}"
             doc_ref = db.collection(collection_name).document(doc_id)
-            doc_ref.set(record)
+            batch.set(doc_ref, record)
+
+        # Commit del batch
+        batch.commit()
 
         logger.info(f"Data from {blob.name} stored in Firestore collection {collection_name}")
-
     except Exception as e:
         logger.error(f"Error processing blob {blob.name}: {str(e)}")
+        raise  # Rilancia l'eccezione per gestirla nel chiamante
     finally:
-        os.unlink(temp_filename)
+        # Rimuovi il file temporaneo
+        if 'temp_filename' in locals():
+            os.unlink(temp_filename)
+
 
 def process_csv_files(local_directory, bucket_name, collection_prefix):
     logger.info(f"Processing CSV files from directory: {local_directory}")
@@ -321,22 +336,20 @@ def process_csv_files(local_directory, bucket_name, collection_prefix):
             file_path = os.path.join(local_directory, filename)
             logger.info(f"Processing file: {file_path}")
 
-            blob = upload_to_cloud_storage(file_path, bucket_name)
-            if blob:
-                collection_name = f"{collection_prefix}_{os.path.splitext(filename)[0]}"
-                store_in_firestore(blob, collection_name)
-            else:
-                logger.error(f"Failed to upload file: {file_path}")
+            try:
+                blob = upload_to_cloud_storage(file_path, bucket_name)
+                if blob:
+                    collection_name = f"{collection_prefix}_{os.path.splitext(filename)[0]}"
+                    store_in_firestore(blob, collection_name)
+                else:
+                    logger.error(f"Failed to upload file: {file_path}")
+            except Exception as e:
+                logger.error(f"Error processing file {file_path}: {str(e)}")
+                # Continua con il prossimo file invece di interrompere l'intero processo
 
-if __name__ == '__main__':
-    # Determine the base directory
-    if os.getenv('GAE_ENV', '').startswith('standard'):
-        # If on App Engine, use the root of the application
-        base_dir = '/app'
-    else:
-        # If running locally or in Cloud Shell, use the current directory
-        base_dir = os.getcwd()
 
+def initialize_data():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     local_directory = os.path.join(base_dir, 'Dati')
     bucket_name = 'pcloud24_1'
     collection_prefix = 'dati'
@@ -344,7 +357,11 @@ if __name__ == '__main__':
     logger.info(f"Base directory: {base_dir}")
     logger.info(f"Local directory for CSV files: {local_directory}")
 
-    # Always process files from the local directory
     process_csv_files(local_directory, bucket_name, collection_prefix)
 
+
+# Inizializza i dati all'avvio dell'applicazione
+initialize_data()
+
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
